@@ -10,6 +10,8 @@ Hazelcast cluster discovery mechanism for Kubernetes.
 In order to cluster Hazelcast in Kubernetes - and harness full scale-up/down capabilities provided -, each instance must know beforehand which ```pods``` containing Hazelcast instances are already up & running, so that networking may be configured properly. This is achieved by means of looking-up ```pods``` with certain ```labels``` in [Kubernetes API](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/accessing_the_api.md).
 The code provided does that and configures Hazelcast TCP clustering.
 
+This is used in [pires/hazelcast-kubernetes](https://github.com/pires/hazelcast-kubernetes).
+
 ## Pre-requisites
 
 * JDK 8
