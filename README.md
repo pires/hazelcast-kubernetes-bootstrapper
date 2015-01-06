@@ -26,11 +26,5 @@ mvn clean package
 ## Run
 
 ```
-mvn spring-boot:run
-```
-
-or
-
-```
 java -jar target/hazelcast-kubernetes-bootstrapper-0.1-SNAPSHOT.jar
 ```
