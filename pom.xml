@@ -4,12 +4,12 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.github.pires</groupId>
-  <artifactId>hazelcast-kubernetes</artifactId>
+  <artifactId>hazelcast-kubernetes-bootstrapper</artifactId>
   <version>0.1-SNAPSHOT</version>
   <packaging>jar</packaging>
   
   <name>Hazelcast Kubernetes Bootstrapper</name>
-  <url>https://github.com/pires/hazelcast-kubernetes</url>
+  <url>https://github.com/pires/hazelcast-kubernetes-bootstrapper</url>
 
   <licenses>
     <license>
@@ -20,9 +20,9 @@
   </licenses>
 
   <scm>
-    <connection>scm:git:git@github.com:pires/hazelcast-kubernetes.git</connection>
-    <developerConnection>scm:git:git@github.com:pires/hazelcast-kubernetes.git</developerConnection>
-    <url>git@github.com:pires/hazelcast-kubernetes.git</url>
+    <connection>scm:git:git@github.com:pires/hazelcast-kubernetes-bootstrapper.git</connection>
+    <developerConnection>scm:git:git@github.com:pires/hazelcast-kubernetes-bootstrapper.git</developerConnection>
+    <url>git@github.com:pires/hazelcast-kubernetes-bootstrapper.git</url>
     <tag>HEAD</tag>
   </scm>
 
@@ -41,20 +41,11 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.sourceEncoding>UTF-8</project.reporting.sourceEncoding>
     <java.version>1.8</java.version>
-    <maven.compiler.source>${java.version}</maven.compiler.source>
-    <maven.compiler.target>${java.version}</maven.compiler.target>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
     <!-- dependencies-->
-    <fabric8.version>2.0.17</fabric8.version>
+    <fabric8.version>2.0.19</fabric8.version>
     <hazelcast.version>3.3.3</hazelcast.version>
-    <!-- fabric8 plug-in -->
-    <docker.image>pires/hazelcast-k8s</docker.image>
-    <fabric8.kubernetes.name>hazelcast-k8s</fabric8.kubernetes.name>
-    <fabric8.replicas>3</fabric8.replicas>
-    <fabric8.service.name>hazelcast</fabric8.service.name>
-    <fabric8.service.port>5700</fabric8.service.port>
-    <fabric8.service.containerPort>5701</fabric8.service.containerPort>
-    <fabric8.container.name>hazelcast-k8s-container</fabric8.container.name>
-    <docker.port.container.hazelcast>5701</docker.port.container.hazelcast>
   </properties>
   
   <parent>
@@ -77,24 +68,6 @@
       <groupId>com.hazelcast</groupId>
       <artifactId>hazelcast</artifactId>
       <version>${hazelcast.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.testng</groupId>
-      <artifactId>testng</artifactId>
-      <version>6.8.8</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.easymock</groupId>
-      <artifactId>easymock</artifactId>
-      <version>3.3</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.powermock</groupId>
-      <artifactId>powermock-module-test-easymock-testng</artifactId>
-      <version>1.6.0</version>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -147,19 +120,6 @@
             <phase>process-test-resources</phase>
             <goals>
               <goal>format</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>io.fabric8</groupId>
-        <artifactId>fabric8-maven-plugin</artifactId>
-        <version>${fabric8.version}</version>
-        <executions>
-          <execution>
-            <id>json</id>
-            <goals>
-              <goal>json</goal>
             </goals>
           </execution>
         </executions>
