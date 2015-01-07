@@ -51,7 +51,7 @@ public class HazelcastDiscoveryControllerTest {
   public void test_found_hazelcast_pods() {
     prepare_kubernetes_pod_request();
     replay(kubernetes);
-    assertEquals(2, controller.retrieveHazelcasPods(kubernetes).size());
+    assertEquals(2, controller.retrieveHazelcastPods(kubernetes).size());
     verify(kubernetes);
   }
 
