@@ -5,7 +5,7 @@
 
   <groupId>com.github.pires</groupId>
   <artifactId>hazelcast-kubernetes-bootstrapper</artifactId>
-  <version>0.1-SNAPSHOT</version>
+  <version>0.2-SNAPSHOT</version>
   <packaging>jar</packaging>
   
   <name>Hazelcast Kubernetes Bootstrapper</name>
@@ -44,14 +44,13 @@
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <!-- dependencies-->
-    <fabric8.version>2.0.19</fabric8.version>
-    <hazelcast.version>3.3.3</hazelcast.version>
+    <hazelcast.version>3.4.2</hazelcast.version>
   </properties>
   
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>1.2.0.RELEASE</version>
+    <version>1.2.3.RELEASE</version>
   </parent>
 
   <dependencies>
@@ -60,14 +59,24 @@
       <artifactId>spring-boot-starter</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.fabric8</groupId>
-      <artifactId>kubernetes-api</artifactId>
-      <version>${fabric8.version}</version>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-core</artifactId>
+      <version>2.5.3</version>
     </dependency>
     <dependency>
       <groupId>com.hazelcast</groupId>
       <artifactId>hazelcast</artifactId>
       <version>${hazelcast.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.5.3</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-annotations</artifactId>
+      <version>2.5.3</version>
     </dependency>
   </dependencies>
 
@@ -89,7 +98,7 @@
                   <version>[3.0.5,)</version>
                 </requireMavenVersion>
                 <requireJavaVersion>
-                  <version>[1.7,)</version>
+                  <version>[1.8,)</version>
                 </requireJavaVersion>
               </rules>
             </configuration>

@@ -1,7 +1,7 @@
 hazelcast-kubernetes-bootstrapper
 =================================
 
-Hazelcast cluster discovery mechanism for Kubernetes.
+Hazelcast (3.4.2) cluster discovery mechanism for Kubernetes.
 
 ## What is
 
@@ -26,5 +26,5 @@ mvn clean package
 ## Run
 
 ```
-java -jar target/hazelcast-kubernetes-bootstrapper-0.1-SNAPSHOT.jar
+java -jar target/hazelcast-kubernetes-bootstrapper-0.2-SNAPSHOT.jar
 ```
