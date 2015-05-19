@@ -24,9 +24,21 @@ import com.hazelcast.config.TcpIpConfig;
 import com.hazelcast.core.Hazelcast;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.cert.X509Certificate;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -43,20 +55,22 @@ public class HazelcastDiscoveryController implements CommandLineRunner {
 
   @JsonIgnoreProperties(ignoreUnknown = true)
   static class Address {
-
     public String IP;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
   static class Subset {
-
     public List<Address> addresses;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
   static class Endpoints {
-
     public List<Subset> subsets;
+  }
+
+  private static String getServiceAccountToken() throws IOException {
+    String file = "/var/run/secrets/kubernetes.io/serviceaccount/token";
+    return new String(Files.readAllBytes(Paths.get(file)));
   }
 
   private static String getEnvOrDefault(String var, String def) {
@@ -66,23 +80,45 @@ public class HazelcastDiscoveryController implements CommandLineRunner {
         : val;
   }
 
+  // TODO: Load the CA cert when it is available on all platforms.
+  private static TrustManager[] trustAll = new TrustManager[] {
+    new X509TrustManager() {
+      public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+      public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+      public X509Certificate[] getAcceptedIssuers() { return null; }
+    }
+  };
+  private static HostnameVerifier trustAllHosts = new HostnameVerifier() {
+    public boolean verify(String hostname, SSLSession session) {
+      return true;
+    }
+  };
+
   @Override
   public void run(String... args) {
-    final String hostName = getEnvOrDefault("KUBERNETES_RO_SERVICE_HOST",
-        "localhost");
-    final String hostPort = getEnvOrDefault("KUBERNETES_RO_SERVICE_PORT",
-        "8080");
     String serviceName = getEnvOrDefault("HAZELCAST_SERVICE", "hazelcast");
     String path = "/api/v1beta3/namespaces/default/endpoints/";
-    final String host = "http://" + hostName + ":" + hostPort;
+    final String host = "https://kubernetes.default.cluster.local";
     log.info("Asking k8s registry at {}..", host);
 
     final List<String> hazelcastEndpoints = new CopyOnWriteArrayList<>();
 
     try {
+      String token = getServiceAccountToken();
+
+      SSLContext ctx = SSLContext.getInstance("SSL");
+      ctx.init(null, trustAll, new SecureRandom());
+
       URL url = new URL(host + path + serviceName);
+      HttpsURLConnection conn = (HttpsURLConnection)url.openConnection();
+      // TODO: remove this when and replace with CA cert loading, when the CA is propogated
+      // to all nodes on all platforms.
+      conn.setSSLSocketFactory(ctx.getSocketFactory());
+      conn.setHostnameVerifier(trustAllHosts);
+      conn.addRequestProperty("Authorization", "Bearer " + token);
+
       ObjectMapper mapper = new ObjectMapper();
-      Endpoints endpoints = mapper.readValue(url, Endpoints.class);
+      Endpoints endpoints = mapper.readValue(conn.getInputStream(), Endpoints.class);
       if (endpoints != null) {
         // Here is a problem point, endpoints.endpoints can be null in first node cases.
         if (endpoints.subsets != null && !endpoints.subsets.isEmpty()) {
@@ -92,7 +128,7 @@ public class HazelcastDiscoveryController implements CommandLineRunner {
           });
         }
       }
-    } catch (IOException ex) {
+    } catch (IOException | NoSuchAlgorithmException | KeyManagementException ex) {
       log.warn("Request to Kubernetes API failed", ex);
     }
 
