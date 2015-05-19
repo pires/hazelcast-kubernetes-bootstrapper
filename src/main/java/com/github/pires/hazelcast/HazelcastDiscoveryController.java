@@ -120,7 +120,6 @@ public class HazelcastDiscoveryController implements CommandLineRunner {
       ObjectMapper mapper = new ObjectMapper();
       Endpoints endpoints = mapper.readValue(conn.getInputStream(), Endpoints.class);
       if (endpoints != null) {
-        // Here is a problem point, endpoints.endpoints can be null in first node cases.
         if (endpoints.subsets != null && !endpoints.subsets.isEmpty()) {
           endpoints.subsets.parallelStream().forEach(subset -> {
             subset.addresses.parallelStream().forEach(
