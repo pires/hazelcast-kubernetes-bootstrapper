@@ -26,5 +26,5 @@ mvn clean package
 ## Run
 
 ```
-java -jar target/hazelcast-kubernetes-bootstrapper-0.3.1-SNAPSHOT.jar
+java -jar target/hazelcast-kubernetes-bootstrapper-0.4-SNAPSHOT.jar
 ```
