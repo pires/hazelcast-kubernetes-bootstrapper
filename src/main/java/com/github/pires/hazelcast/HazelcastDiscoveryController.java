@@ -55,7 +55,7 @@ public class HazelcastDiscoveryController implements CommandLineRunner {
 
   @JsonIgnoreProperties(ignoreUnknown = true)
   static class Address {
-    public String IP;
+    public String ip;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -124,7 +124,7 @@ public class HazelcastDiscoveryController implements CommandLineRunner {
         if (endpoints.subsets != null && !endpoints.subsets.isEmpty()) {
           endpoints.subsets.parallelStream().forEach(subset -> {
             subset.addresses.parallelStream().forEach(
-                addr -> hazelcastEndpoints.add(addr.IP));
+                addr -> hazelcastEndpoints.add(addr.ip));
           });
         }
       }
