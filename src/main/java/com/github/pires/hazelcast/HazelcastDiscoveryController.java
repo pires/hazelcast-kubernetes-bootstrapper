@@ -97,7 +97,8 @@ public class HazelcastDiscoveryController implements CommandLineRunner {
   @Override
   public void run(String... args) {
     final String serviceName = getEnvOrDefault("HAZELCAST_SERVICE", "hazelcast");
-    final String path = "/api/v1/namespaces/default/endpoints/";
+    final String namespace = getEnvOrDefault("POD_NAMESPACE", "default");
+    final String path = String.format("/api/v1/namespaces/%s/endpoints/", namespace);
     final String domain = getEnvOrDefault("DNS_DOMAIN", "cluster.local");
     final String host = getEnvOrDefault("KUBERNETES_MASTER", "https://kubernetes.default.svc.".concat(domain));
     log.info("Asking k8s registry at {}..", host);
