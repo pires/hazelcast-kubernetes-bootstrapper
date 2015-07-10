@@ -31,9 +31,3 @@ This is used in [pires/hazelcast-kubernetes](https://github.com/pires/hazelcast-
 ```
 mvn clean package
 ```
-
-## Run
-
-```
-java -jar target/hazelcast-kubernetes-bootstrapper-0.4-SNAPSHOT.jar
-```
