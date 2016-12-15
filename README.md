@@ -18,7 +18,7 @@ To configure Hazelcast inside of the Kubernetes cluster the following environmen
 * `HC_GROUP_NAME` - Hazelcast group name. Default: `someGroup`.
 * `HC_GROUP_PASSWORD` - Hazelcast group password. Default: `someSecret`.
 * `HC_PORT` - Port on which Hazelcast should be running.
-* `HC_REST_ENABLED` - Status of Rest api Default: `false`.
+* `HC_REST_ENABLED` - Whether to enable Hazelcast REST API. Default: `false`.
 
 This is used in [pires/hazelcast-kubernetes](https://github.com/pires/hazelcast-kubernetes).
 
