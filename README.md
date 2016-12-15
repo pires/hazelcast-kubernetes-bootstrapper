@@ -14,10 +14,11 @@ To configure Hazelcast inside of the Kubernetes cluster the following environmen
 
 * `HAZELCAST_SERVICE` - name of the Hazelcast service, declared in the Kubernetes service configuration. Default: `hazelcast`.
 * `DNS_DOMAIN` - domain name used inside of the cluster. Default: `cluster.local`.
-* `POD_NAMESPACE` - namespace in which hazelcast should be running. Defautl: `default`. Use the [Downward API](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/downward_api.md) to set it automatically.
+* `POD_NAMESPACE` - namespace in which hazelcast should be running. Default: `default`. Use the [Downward API](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/downward_api.md) to set it automatically.
 * `HC_GROUP_NAME` - Hazelcast group name. Default: `someGroup`.
 * `HC_GROUP_PASSWORD` - Hazelcast group password. Default: `someSecret`.
 * `HC_PORT` - Port on which Hazelcast should be running.
+* `HC_REST_ENABLED` - Whether to enable Hazelcast REST API. Default: `false`.
 
 This is used in [pires/hazelcast-kubernetes](https://github.com/pires/hazelcast-kubernetes).
 

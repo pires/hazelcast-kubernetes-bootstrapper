@@ -3,7 +3,7 @@
  * use this file except in compliance with the License. You may obtain a copy of
  * the License at
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -142,7 +142,9 @@ public class HazelcastDiscoveryController implements CommandLineRunner {
         final String HC_GROUP_PASSWORD = getEnvOrDefault("HC_GROUP_PASSWORD",
                 "someSecret");
         final int HC_PORT = Integer.parseInt(getEnvOrDefault("HC_PORT", "5701"));
+        final String HC_REST_ENABLED = getEnvOrDefault("HC_REST_ENABLED", "false");
         cfg.setGroupConfig(new GroupConfig(HC_GROUP_NAME, HC_GROUP_PASSWORD));
+        cfg.setProperty("hazelcast.rest.enabled", HC_REST_ENABLED);
         // network configuration initialization
         final NetworkConfig netCfg = new NetworkConfig();
         netCfg.setPortAutoIncrement(false);
