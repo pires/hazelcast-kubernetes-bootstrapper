@@ -50,6 +50,7 @@ public class HazelcastDiscoveryController implements CommandLineRunner {
     @JsonIgnoreProperties(ignoreUnknown = true)
     static class Subset {
         public List<Address> addresses;
+        public List<Address> notReadyAddresses;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -99,7 +100,6 @@ public class HazelcastDiscoveryController implements CommandLineRunner {
         log.info("Asking k8s registry at {}..", host);
 
         final List<String> hazelcastEndpoints = new CopyOnWriteArrayList<>();
-
         try {
             final String token = getServiceAccountToken();
 
@@ -119,8 +119,19 @@ public class HazelcastDiscoveryController implements CommandLineRunner {
             if (endpoints != null) {
                 if (endpoints.subsets != null && !endpoints.subsets.isEmpty()) {
                     endpoints.subsets.forEach(subset -> {
-                        subset.addresses.forEach(
+                    	if (subset.addresses != null && !subset.addresses.isEmpty()) {
+                        	subset.addresses.forEach(
                                 addr -> hazelcastEndpoints.add(addr.ip));
+                        } else if (subset.notReadyAddresses != null && !subset.notReadyAddresses.isEmpty()) {
+                        	// in case of a full cluster restart
+                        	// no address might be ready, in order to allow the cluster
+                        	// to start initially, we will use the not ready addresses
+                        	// as fallback
+                        	subset.notReadyAddresses.forEach(
+                                addr -> hazelcastEndpoints.add(addr.ip));
+                        } else {
+                        	log.warn("Could not find any hazelcast nodes.");
+                        }
                     });
                 }
             }
