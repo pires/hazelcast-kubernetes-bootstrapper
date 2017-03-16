@@ -150,11 +150,14 @@ public class HazelcastDiscoveryController implements CommandLineRunner {
         cfg.setInstanceName(UUID.randomUUID().toString());
         // group configuration
         final String HC_GROUP_NAME = getEnvOrDefault("HC_GROUP_NAME", "someGroup");
-        final String HC_GROUP_PASSWORD = getEnvOrDefault("HC_GROUP_PASSWORD",
-                "someSecret");
+        final String HC_GROUP_PASSWORD = getEnvOrDefault("HC_GROUP_PASSWORD", null);
         final int HC_PORT = Integer.parseInt(getEnvOrDefault("HC_PORT", "5701"));
         final String HC_REST_ENABLED = getEnvOrDefault("HC_REST_ENABLED", "false");
-        cfg.setGroupConfig(new GroupConfig(HC_GROUP_NAME, HC_GROUP_PASSWORD));
+        if (HC_GROUP_PASSWORD != null) {
+            cfg.setGroupConfig(new GroupConfig(HC_GROUP_NAME, HC_GROUP_PASSWORD));
+        } else {
+            cfg.setGroupConfig(new GroupConfig(HC_GROUP_NAME));
+        }
         cfg.setProperty("hazelcast.rest.enabled", HC_REST_ENABLED);
         // network configuration initialization
         final NetworkConfig netCfg = new NetworkConfig();
