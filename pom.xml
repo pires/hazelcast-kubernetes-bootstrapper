@@ -233,6 +233,7 @@
                                 </goals>
                                 <configuration>
                                     <keyname>7E4356B0</keyname>
+                                    <useAgent>true</useAgent>
                                 </configuration>
                             </execution>
                         </executions>
