@@ -1,0 +1,20 @@
+version: "3"
+services:
+  hazelcast:
+    build:
+      context: .
+      dockerfile: Dockerfile-Dev
+    environment:
+      LOCAL_DEBUGGING: "true"
+      DNS_DOMAIN: "cluster.local"
+      HAZELCAST_SERVICE: "hazelcast-all"
+      HC_GROUP_NAME: "dev"
+      HC_GROUP_PASSWORD: "dev-pass"
+    ports:
+      - "5701:5701"
+      - "8080:8080"
+    networks:
+      - integrationtest
+
+networks:
+  integrationtest: {}
