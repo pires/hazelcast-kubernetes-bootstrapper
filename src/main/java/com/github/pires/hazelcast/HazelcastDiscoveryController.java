@@ -16,6 +16,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.config.*;
 import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.HazelcastInstance;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -99,7 +101,15 @@ public class HazelcastDiscoveryController implements CommandLineRunner {
         final String host = getEnvOrDefault("KUBERNETES_MASTER", "https://kubernetes.default.svc.".concat(domain));
         log.info("Asking k8s registry at {}..", host);
 
+
         final List<String> hazelcastEndpoints = new CopyOnWriteArrayList<>();
+        final Boolean isDebuging = Boolean.parseBoolean(getEnvOrDefault("LOCAL_DEBUGGING", "false"));
+        if (isDebuging) {
+            log.info("NON KUBERNETES MODE!");
+            runHazelcast(hazelcastEndpoints);
+            return;
+        }
+
         try {
             final String token = getServiceAccountToken();
 
@@ -107,6 +117,7 @@ public class HazelcastDiscoveryController implements CommandLineRunner {
             ctx.init(null, trustAll, new SecureRandom());
 
             final URL url = new URL(host + path + serviceName);
+
             final HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
             // TODO: remove this when and replace with CA cert loading, when the CA is propogated
             // to all nodes on all platforms.
@@ -180,7 +191,9 @@ public class HazelcastDiscoveryController implements CommandLineRunner {
         // set it all
         cfg.setNetworkConfig(netCfg);
         // run
-        Hazelcast.newHazelcastInstance(cfg);
+        HazelcastInstance hcInstance = Hazelcast.newHazelcastInstance(cfg);
+
+        HcStatusProbe.setHazelCastInstance(hcInstance);
     }
 
 }

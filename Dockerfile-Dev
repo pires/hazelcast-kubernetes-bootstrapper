@@ -1,0 +1,3 @@
+FROM quay.io/pires/docker-jre:8u131_alpine3.6.2
+COPY ./target/hazelcast-kubernetes-bootstrapper-*-SNAPSHOT.jar /bootstrapper.jar
+CMD java -jar /bootstrapper.jar

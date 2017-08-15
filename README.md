@@ -32,3 +32,19 @@ This is used in [pires/hazelcast-kubernetes](https://github.com/pires/hazelcast-
 ```
 mvn clean package
 ```
+
+## LOCAL INTEGRATION TEST (i.e. NON KUBERNETES ENV)
+```
+mvn clean package
+docker-compose build hazelcast
+docker-compose up hazelcast
+```
+
+Then testing out the various API endpoins:
+```
+curl -v 192.168.99.100:8080/hc/members
+curl -v 192.168.99.100:8080/hc/state
+
+curl --data "dev&dev-pass"  http://192.168.99.100:5701/hazelcast/rest/management/cluster/state
+
+```
