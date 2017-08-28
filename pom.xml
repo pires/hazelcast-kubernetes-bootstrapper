@@ -10,7 +10,7 @@
 
     <groupId>com.github.pires</groupId>
     <artifactId>hazelcast-kubernetes-bootstrapper</artifactId>
-    <version>3.8.4-SNAPSHOT</version>
+    <version>3.8.4</version>
     <packaging>jar</packaging>
 
     <name>Hazelcast Kubernetes Bootstrapper</name>
