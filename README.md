@@ -1,7 +1,7 @@
 hazelcast-kubernetes-bootstrapper
 =================================
 
-Hazelcast (3.8.5) cluster discovery mechanism for Kubernetes.
+Hazelcast (3.8.6) cluster discovery mechanism for Kubernetes.
 
 ## What is
 
