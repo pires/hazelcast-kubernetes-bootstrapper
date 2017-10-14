@@ -194,6 +194,9 @@
     <profiles>
         <profile>
             <id>release-sign-artifacts</id>
+            <properties>
+                <gpg.keyname>7E4356B0</gpg.keyname>
+            </properties>
             <activation>
                 <property>
                     <name>performRelease</name>
@@ -216,24 +219,6 @@
                                     <failOnError>false</failOnError>
                                     <additionalparam>-Xdoclint:none
                                     </additionalparam>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <version>1.4</version>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                                <configuration>
-                                    <keyname>7E4356B0</keyname>
-                                    <useAgent>true</useAgent>
                                 </configuration>
                             </execution>
                         </executions>
