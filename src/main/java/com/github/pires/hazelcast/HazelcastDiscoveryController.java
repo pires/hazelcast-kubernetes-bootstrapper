@@ -14,14 +14,16 @@ package com.github.pires.hazelcast;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hazelcast.config.*;
+import com.hazelcast.config.Config;
+import com.hazelcast.config.FileSystemXmlConfig;
+import com.hazelcast.config.GroupConfig;
+import com.hazelcast.config.JoinConfig;
+import com.hazelcast.config.MulticastConfig;
+import com.hazelcast.config.NetworkConfig;
+import com.hazelcast.config.SSLConfig;
+import com.hazelcast.config.TcpIpConfig;
 import com.hazelcast.core.Hazelcast;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Controller;
-
-import javax.net.ssl.*;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
@@ -33,6 +35,16 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Controller;
 
 /**
  * Read from Kubernetes API all Hazelcast service bound pods, get their IP and connect to them.
@@ -40,147 +52,162 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Controller
 public class HazelcastDiscoveryController implements CommandLineRunner {
 
-    private static final Logger log = LoggerFactory.getLogger(HazelcastDiscoveryController.class);
+  private static final Logger log = LoggerFactory.getLogger(HazelcastDiscoveryController.class);
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    static class Address {
-        public String ip;
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  static class Address {
+
+    public String ip;
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  static class Subset {
+
+    public List<Address> addresses;
+    public List<Address> notReadyAddresses;
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  static class Endpoints {
+
+    public List<Subset> subsets;
+  }
+
+  private static String getServiceAccountToken() throws IOException {
+    String file = "/var/run/secrets/kubernetes.io/serviceaccount/token";
+    return new String(Files.readAllBytes(Paths.get(file)));
+  }
+
+  private static String getEnvOrDefault(String var, String def) {
+    final String val = System.getenv(var);
+    log.info("GOT {}:{}", var, val);
+    return (val == null || val.isEmpty())
+        ? def
+        : val;
+  }
+
+  // TODO: Load the CA cert when it is available on all platforms.
+  private static TrustManager[] trustAll = new TrustManager[]{
+      new X509TrustManager() {
+        public void checkServerTrusted(X509Certificate[] certs, String authType) {
+        }
+
+        public void checkClientTrusted(X509Certificate[] certs, String authType) {
+        }
+
+        public X509Certificate[] getAcceptedIssuers() {
+          return null;
+        }
+      }
+  };
+  private static HostnameVerifier trustAllHosts = new HostnameVerifier() {
+    public boolean verify(String hostname, SSLSession session) {
+      return true;
     }
+  };
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    static class Subset {
-        public List<Address> addresses;
-        public List<Address> notReadyAddresses;
-    }
+  @Override
+  public void run(String... args) {
+    final String serviceName = getEnvOrDefault("HAZELCAST_SERVICE", "hazelcast");
+    final String namespace = getEnvOrDefault("POD_NAMESPACE", "default");
+    final String path = String.format("/api/v1/namespaces/%s/endpoints/", namespace);
+    final String domain = getEnvOrDefault("DNS_DOMAIN", "cluster.local");
+    final String host = getEnvOrDefault("KUBERNETES_MASTER", "https://kubernetes.default.svc.".concat(domain));
+    log.info("Asking k8s registry at {}..", host);
 
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    static class Endpoints {
-        public List<Subset> subsets;
-    }
+    final List<String> hazelcastEndpoints = new CopyOnWriteArrayList<>();
+    try {
+      final String token = getServiceAccountToken();
 
-    private static String getServiceAccountToken() throws IOException {
-        String file = "/var/run/secrets/kubernetes.io/serviceaccount/token";
-        return new String(Files.readAllBytes(Paths.get(file)));
-    }
+      final SSLContext ctx = SSLContext.getInstance("SSL");
+      ctx.init(null, trustAll, new SecureRandom());
 
-    private static String getEnvOrDefault(String var, String def) {
-        final String val = System.getenv(var);
-        return (val == null || val.isEmpty())
-                ? def
-                : val;
-    }
+      final URL url = new URL(host + path + serviceName);
+      final HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
+      // TODO: remove this when and replace with CA cert loading, when the CA is propogated
+      // to all nodes on all platforms.
+      conn.setSSLSocketFactory(ctx.getSocketFactory());
+      conn.setHostnameVerifier(trustAllHosts);
+      conn.addRequestProperty("Authorization", "Bearer " + token);
 
-    // TODO: Load the CA cert when it is available on all platforms.
-    private static TrustManager[] trustAll = new TrustManager[]{
-            new X509TrustManager() {
-                public void checkServerTrusted(X509Certificate[] certs, String authType) {
-                }
-
-                public void checkClientTrusted(X509Certificate[] certs, String authType) {
-                }
-
-                public X509Certificate[] getAcceptedIssuers() {
-                    return null;
-                }
+      final ObjectMapper mapper = new ObjectMapper();
+      final Endpoints endpoints = mapper.readValue(conn.getInputStream(), Endpoints.class);
+      if (endpoints != null) {
+        if (endpoints.subsets != null && !endpoints.subsets.isEmpty()) {
+          endpoints.subsets.forEach(subset -> {
+            if (subset.addresses != null && !subset.addresses.isEmpty()) {
+              subset.addresses.forEach(
+                  addr -> hazelcastEndpoints.add(addr.ip));
+            } else if (subset.notReadyAddresses != null && !subset.notReadyAddresses.isEmpty()) {
+              // in case of a full cluster restart
+              // no address might be ready, in order to allow the cluster
+              // to start initially, we will use the not ready addresses
+              // as fallback
+              subset.notReadyAddresses.forEach(
+                  addr -> hazelcastEndpoints.add(addr.ip));
+            } else {
+              log.warn("Could not find any hazelcast nodes.");
             }
-    };
-    private static HostnameVerifier trustAllHosts = new HostnameVerifier() {
-        public boolean verify(String hostname, SSLSession session) {
-            return true;
+          });
         }
-    };
-
-    @Override
-    public void run(String... args) {
-        final String serviceName = getEnvOrDefault("HAZELCAST_SERVICE", "hazelcast");
-        final String namespace = getEnvOrDefault("POD_NAMESPACE", "default");
-        final String path = String.format("/api/v1/namespaces/%s/endpoints/", namespace);
-        final String domain = getEnvOrDefault("DNS_DOMAIN", "cluster.local");
-        final String host = getEnvOrDefault("KUBERNETES_MASTER", "https://kubernetes.default.svc.".concat(domain));
-        log.info("Asking k8s registry at {}..", host);
-
-        final List<String> hazelcastEndpoints = new CopyOnWriteArrayList<>();
-        try {
-            final String token = getServiceAccountToken();
-
-            final SSLContext ctx = SSLContext.getInstance("SSL");
-            ctx.init(null, trustAll, new SecureRandom());
-
-            final URL url = new URL(host + path + serviceName);
-            final HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
-            // TODO: remove this when and replace with CA cert loading, when the CA is propogated
-            // to all nodes on all platforms.
-            conn.setSSLSocketFactory(ctx.getSocketFactory());
-            conn.setHostnameVerifier(trustAllHosts);
-            conn.addRequestProperty("Authorization", "Bearer " + token);
-
-            final ObjectMapper mapper = new ObjectMapper();
-            final Endpoints endpoints = mapper.readValue(conn.getInputStream(), Endpoints.class);
-            if (endpoints != null) {
-                if (endpoints.subsets != null && !endpoints.subsets.isEmpty()) {
-                    endpoints.subsets.forEach(subset -> {
-                    	if (subset.addresses != null && !subset.addresses.isEmpty()) {
-                        	subset.addresses.forEach(
-                                addr -> hazelcastEndpoints.add(addr.ip));
-                        } else if (subset.notReadyAddresses != null && !subset.notReadyAddresses.isEmpty()) {
-                        	// in case of a full cluster restart
-                        	// no address might be ready, in order to allow the cluster
-                        	// to start initially, we will use the not ready addresses
-                        	// as fallback
-                        	subset.notReadyAddresses.forEach(
-                                addr -> hazelcastEndpoints.add(addr.ip));
-                        } else {
-                        	log.warn("Could not find any hazelcast nodes.");
-                        }
-                    });
-                }
-            }
-        } catch (IOException | NoSuchAlgorithmException | KeyManagementException ex) {
-            log.warn("Request to Kubernetes API failed", ex);
-        }
-
-        log.info("Found {} pods running Hazelcast.", hazelcastEndpoints.size());
-
-        runHazelcast(hazelcastEndpoints);
+      }
+    } catch (IOException | NoSuchAlgorithmException | KeyManagementException ex) {
+      log.warn("Request to Kubernetes API failed", ex);
     }
 
-    private void runHazelcast(final List<String> nodes) {
-        // configure Hazelcast instance
-        final Config cfg = new Config();
-        cfg.setInstanceName(UUID.randomUUID().toString());
-        // group configuration
-        final String HC_GROUP_NAME = getEnvOrDefault("HC_GROUP_NAME", "someGroup");
-        final String HC_GROUP_PASSWORD = getEnvOrDefault("HC_GROUP_PASSWORD", null);
-        final int HC_PORT = Integer.parseInt(getEnvOrDefault("HC_PORT", "5701"));
-        final String HC_REST_ENABLED = getEnvOrDefault("HC_REST_ENABLED", "false");
-        if (HC_GROUP_PASSWORD != null) {
-            cfg.setGroupConfig(new GroupConfig(HC_GROUP_NAME, HC_GROUP_PASSWORD));
-        } else {
-            cfg.setGroupConfig(new GroupConfig(HC_GROUP_NAME));
-        }
-        cfg.setProperty("hazelcast.rest.enabled", HC_REST_ENABLED);
-        // network configuration initialization
-        final NetworkConfig netCfg = new NetworkConfig();
-        netCfg.setPortAutoIncrement(false);
-        netCfg.setPort(HC_PORT);
-        // multicast
-        final MulticastConfig mcCfg = new MulticastConfig();
-        mcCfg.setEnabled(false);
-        // tcp
-        final TcpIpConfig tcpCfg = new TcpIpConfig();
-        nodes.forEach(tcpCfg::addMember);
-        tcpCfg.setEnabled(true);
-        // network join configuration
-        final JoinConfig joinCfg = new JoinConfig();
-        joinCfg.setMulticastConfig(mcCfg);
-        joinCfg.setTcpIpConfig(tcpCfg);
-        netCfg.setJoin(joinCfg);
-        // ssl
-        netCfg.setSSLConfig(new SSLConfig().setEnabled(false));
-        // set it all
-        cfg.setNetworkConfig(netCfg);
-        // run
-        Hazelcast.newHazelcastInstance(cfg);
+    log.info("Found {} pods running Hazelcast.", hazelcastEndpoints.size());
+
+    runHazelcast(hazelcastEndpoints);
+  }
+
+  private void runHazelcast(final List<String> nodes) {
+    final String configXmlPath = getEnvOrDefault("CONFIG_XML_PATH", "/hazelcast/hazelcast.xml");
+
+    Config config;
+    try {
+      config = new FileSystemXmlConfig(configXmlPath);
+    } catch (FileNotFoundException e) {
+      log.warn("Could not find hazelcast config file {}: ", configXmlPath, e);
+      config = new Config();
     }
+
+    // configure Hazelcast instance
+    config.setInstanceName(UUID.randomUUID().toString());
+    // group configuration
+    final String HC_GROUP_NAME = getEnvOrDefault("HC_GROUP_NAME", "someGroup");
+    final String HC_GROUP_PASSWORD = getEnvOrDefault("HC_GROUP_PASSWORD", null);
+    final int HC_PORT = Integer.parseInt(getEnvOrDefault("HC_PORT", "5701"));
+    final String HC_REST_ENABLED = getEnvOrDefault("HC_REST_ENABLED", "false");
+    if (HC_GROUP_PASSWORD != null) {
+      config.setGroupConfig(new GroupConfig(HC_GROUP_NAME, HC_GROUP_PASSWORD));
+    } else {
+      config.setGroupConfig(new GroupConfig(HC_GROUP_NAME));
+    }
+    config.setProperty("hazelcast.rest.enabled", HC_REST_ENABLED);
+    // network configuration initialization
+    final NetworkConfig netCfg = new NetworkConfig();
+    netCfg.setPortAutoIncrement(false);
+    netCfg.setPortCount(1);
+    netCfg.setPort(HC_PORT);
+    // multicast
+    final MulticastConfig mcCfg = new MulticastConfig();
+    mcCfg.setEnabled(false);
+    // tcp
+    final TcpIpConfig tcpCfg = new TcpIpConfig();
+    nodes.forEach(tcpCfg::addMember);
+    tcpCfg.setEnabled(true);
+    // network join configuration
+    final JoinConfig joinCfg = new JoinConfig();
+    joinCfg.setMulticastConfig(mcCfg);
+    joinCfg.setTcpIpConfig(tcpCfg);
+    netCfg.setJoin(joinCfg);
+    // ssl
+    netCfg.setSSLConfig(new SSLConfig().setEnabled(false));
+    // set it all
+    config.setNetworkConfig(netCfg);
+
+    // run
+    Hazelcast.newHazelcastInstance(config);
+  }
 
 }
