@@ -4,7 +4,7 @@
 
     <groupId>com.github.pires</groupId>
     <artifactId>hazelcast-kubernetes-bootstrapper</artifactId>
-    <version>3.9.3-SNAPSHOT</version>
+    <version>3.9.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Hazelcast Kubernetes Bootstrapper</name>
