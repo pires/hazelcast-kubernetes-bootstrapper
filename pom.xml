@@ -194,9 +194,6 @@
     <profiles>
         <profile>
             <id>release-sign-artifacts</id>
-            <properties>
-                <gpg.keyname>7E4356B0</gpg.keyname>
-            </properties>
             <activation>
                 <property>
                     <name>performRelease</name>
