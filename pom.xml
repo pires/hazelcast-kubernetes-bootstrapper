@@ -57,7 +57,7 @@
         <!-- dependencies-->
         <hazelcast.version>3.12.3</hazelcast.version>
         <spring.boot.version>1.4.6.RELEASE</spring.boot.version>
-        <jackson.version>2.10.3</jackson.version>
+        <jackson.version>2.12.6.1</jackson.version>
     </properties>
 
     <dependencies>
